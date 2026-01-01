@@ -250,17 +250,14 @@ class PFrame:
 
     def setDefaultCloseOperation(self, op="exit", f = None):
         """设置关闭行为"""
-        def c():
-            f()
         if op == "exit":
             self.root.protocol("WM_DELETE_WINDOW", self.root.quit)
         elif op == "close":
             self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)
         elif op == "hide":
             self.root.protocol("WM_DELETE_WINDOW", self.root.withdraw)
-        elif op == "set_close":
-            self.root.protocol("WM_DELETE_WINDOW", c)
-
+        elif op == "s":
+            self.root.protocol("WM_DELETE_WINDOW", f)
     def setVisible(self, visible=True):
         """显示窗口并启动事件循环"""
         if visible:

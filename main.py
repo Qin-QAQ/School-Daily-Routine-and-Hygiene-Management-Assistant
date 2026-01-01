@@ -55,8 +55,9 @@ class MainPage(PFrame):
         self.s = ""
         def close():
             self.s = "closed"
+            self.root.withdraw()
         
-        self.setDefaultCloseOperation("set_close", close)
+        self.setDefaultCloseOperation("s", close)
         # 创建元素
         self.d_sys_name = JLabel("校园两操卫生管理助手/工作界面")
         self.user = self_user
@@ -113,9 +114,8 @@ class AdminControl(PFrame):
                 self.list.setItems(s_user.get_user_names("Admin"))
                 print("ok")
         def do_sth_when_back_button_click():
-            
-            self.root.destroy()
-        self.setDefaultCloseOperation("close")
+            self.root.withdraw()
+        self.setDefaultCloseOperation("hide")
 
         self.l = JLabel("校园两操卫生管理助手/管理打分员账户")
         self.list = JList()
@@ -138,6 +138,7 @@ class AdminControl(PFrame):
 
         self.add_button.addActionListener(func=do_sth_when_click_at_add_button)
         self.del_button.addActionListener(func=do_sth_when_click_at_del_button_and_select)
+        self.back_button.addActionListener(func=do_sth_when_back_button_click)
 class GraderControl(PFrame):
     def __init__(self, s_user: User):
         self.title = "School Daily Routine and Hygiene Management Assistant"
@@ -156,7 +157,7 @@ class GraderControl(PFrame):
                 s_user.delete_admin(s)
                 self.list.setItems(s_user.get_user_names("Grader"))
                 print("ok")
-        self.setDefaultCloseOperation("close")
+        self.setDefaultCloseOperation("hide")
 
         self.l = JLabel("校园两操卫生管理助手/管理打分员账户")
         self.list = JList()
@@ -188,7 +189,7 @@ if __name__ == '__main__':
 
     if user.login_level == "Admin":
         app = MainPage(user)
-        while app.s == "closed":
+        while app.s != "closed":
             app.setVisible(True)
             if app.click_state == "set_admin":
                 a_c_page = AdminControl(user)
@@ -201,6 +202,6 @@ if __name__ == '__main__':
         pass
     elif user.login_level == "Teacher":
         pass
-    print("OK")
+    print(f"OK, {user.login_level}")
 
 
