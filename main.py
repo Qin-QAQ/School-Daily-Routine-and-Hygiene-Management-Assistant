@@ -52,12 +52,6 @@ class LoginPage(PFrame):
 class MainPage(PFrame):
     def __init__(self, self_user: User):
         super().__init__("School Daily Routine and Hygiene Management Assistant", 600, 600)
-        self.s = ""
-        def close():
-            self.s = "closed"
-            self.root.withdraw()
-        
-        self.setDefaultCloseOperation("s", close)
         # 创建元素
         self.d_sys_name = JLabel("校园两操卫生管理助手/工作界面")
         self.user = self_user
@@ -113,15 +107,12 @@ class AdminControl(PFrame):
                 s_user.delete_admin(s)
                 self.list.setItems(s_user.get_user_names("Admin"))
                 print("ok")
-        def do_sth_when_back_button_click():
-            self.root.withdraw()
         self.setDefaultCloseOperation("hide")
 
         self.l = JLabel("校园两操卫生管理助手/管理打分员账户")
         self.list = JList()
         self.add_button = JButton("添加 管理员")
         self.del_button = JButton("删除 管理员")
-        self.back_button = JButton("返回主界面")
 
 
         self.add_button.setBounds(0, 70, 200, 30)
@@ -129,7 +120,6 @@ class AdminControl(PFrame):
         self.l.setBounds(200, 0, 200, 30)
         self.list.setBounds(400, 70 , 200, 400)
         self.list.setItems(s_user.get_user_names("Admin"))
-        self.back_button.setBounds(70, 300, 200, 30)
 
         self.add(self.l)
         self.add(self.list)
@@ -138,7 +128,6 @@ class AdminControl(PFrame):
 
         self.add_button.addActionListener(func=do_sth_when_click_at_add_button)
         self.del_button.addActionListener(func=do_sth_when_click_at_del_button_and_select)
-        self.back_button.addActionListener(func=do_sth_when_back_button_click)
 class GraderControl(PFrame):
     def __init__(self, s_user: User):
         self.title = "School Daily Routine and Hygiene Management Assistant"
@@ -189,15 +178,14 @@ if __name__ == '__main__':
 
     if user.login_level == "Admin":
         app = MainPage(user)
-        while app.s != "closed":
-            app.setVisible(True)
-            if app.click_state == "set_admin":
-                a_c_page = AdminControl(user)
-                a_c_page.setVisible(True)
-            elif app.click_state == "set_grader":
-                g_c_page = GraderControl
-            elif app.click_state == "set_teacher":
-                pass
+        app.setVisible(True)
+        if app.click_state == "set_admin":
+            a_c_page = AdminControl(user)
+            a_c_page.setVisible(True)
+        elif app.click_state == "set_grader":
+            g_c_page = GraderControl
+        elif app.click_state == "set_teacher":
+            pass
     elif user.login_level == "Grader":
         pass
     elif user.login_level == "Teacher":
