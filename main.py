@@ -158,7 +158,7 @@ class GraderControl(PFrame):
         self.del_button.setBounds(0, 120, 200, 30)
         self.l.setBounds(200, 0, 200, 30)
         self.list.setBounds(400, 70 , 200, 400)
-        self.list.setItems(s_user.get_user_names("Admin"))
+        self.list.setItems(s_user.get_user_names("Grader"))
 
         self.add(self.l)
         self.add(self.list)
@@ -184,7 +184,8 @@ if __name__ == '__main__':
             a_c_page = AdminControl(user)
             a_c_page.setVisible(True)
         elif app.click_state == "set_grader":
-            g_c_page = GraderControl
+            g_c_page = GraderControl(user)
+
         elif app.click_state == "set_teacher":
             pass
     elif user.login_level == "Grader":

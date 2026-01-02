@@ -9,7 +9,8 @@ from openpyxl.utils import get_column_letter
 import pandas as pd
 import numpy as np
 
-
+class HasNoFinishError(Exception):
+    pass
 def remove_empty_columns(path):
     """
     删除Excel文件中第一行和第二行都为空的列（空白列），
@@ -27,7 +28,7 @@ def remove_empty_columns(path):
         return
 
     # 将空字符串转为 NaN，便于统一判断
-    df = df.replace(r'^\s*$', np.nan, regex=True).infer_objects(copy=False)
+    df = df.replace(r'^\s*$', np.nan, regex=True).infer_objects
 
     # 获取所有列索引
     cols_to_drop = []
@@ -218,6 +219,8 @@ class User:
         self.password = password
         self.__level = "has no login"
         self.__punch_state = False
+        self.m_class = ""
+        self.m_number = ""
 
     def __get_input(self, text: str, parent_window) -> str:
         dialog = tk.Toplevel(parent_window)
@@ -281,6 +284,58 @@ class User:
         parent_window.wait_window(dialog)  # 阻塞直到 dialog 被 destroy
 
         return result[0] if result[0] is not None else ""
+
+    def set_m_classes(self, root) -> None:
+        import json
+        import os
+
+        def read_config(file_path='config.json'):
+            """
+            读取 config.json 配置文件并返回其内容。
+
+            参数:
+                file_path (str): 配置文件路径，默认为 'config.json'
+
+            返回:
+                dict: JSON 文件解析后的 Python 字典
+
+            异常:
+                FileNotFoundError: 如果文件不存在
+                json.JSONDecodeError: 如果文件内容不是合法的 JSON
+            """
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"配置文件 '{file_path}' 不存在。")
+
+            with open(file_path, 'r', encoding='utf-8') as _f:
+                return json.load(_f)
+        """
+            {
+                "u_name1" : 
+                {
+                    grade : 6
+                    m_number : 6
+                }
+                "u_name2"
+                {
+                    grade : 6
+                    m_number : 6
+                }
+            }
+        """
+        u_name = self.login_name
+        info: dict[str, dict[str, str]] = read_config()
+        print(info)
+        grade = self.__get_input(f"请输入{u_name}所需要管理的年级", root)
+        m_number = self.__get_input(f"请输入{grade}有多少个班级", root)
+        if u_name in info:
+            info[u_name]["grade"] = grade
+            info[u_name]["m_number"] = m_number
+        else:
+            info[u_name] = {"grade": grade, "m_number": m_number}
+        with open('config.json', 'w', encoding='utf-8') as _f:
+            json.dump(info, _f, ensure_ascii=False, indent=4)
+
+
 
     @property
     def login_level(self) -> str:

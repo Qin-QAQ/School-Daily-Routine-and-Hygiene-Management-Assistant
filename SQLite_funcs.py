@@ -243,71 +243,28 @@ class Leaf:
         Leaf是最底层的数据结构，用于存储打分员每周的分数
         :param user_name: 用户名
         """
-        def read_config(file_path="config.txt") -> dict:
+        import json
+        import os
+
+        def read_config(file_path='config.json'):
             """
-            读取config.txt配置文件，返回配置字典
+            读取 config.json 配置文件并返回其内容。
 
             参数:
-                file_path: 配置文件路径，默认是当前目录的config.txt
+                file_path (str): 配置文件路径，默认为 'config.json'
 
             返回:
-                dict: 配置键值对字典，自动转换布尔值/数字类型
+                dict: JSON 文件解析后的 Python 字典
+
+            异常:
+                FileNotFoundError: 如果文件不存在
+                json.JSONDecodeError: 如果文件内容不是合法的 JSON
             """
-            config_dict = {}
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"配置文件 '{file_path}' 不存在。")
 
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    # 逐行读取文件
-                    for line_num, line in enumerate(f, 1):
-                        # 去除首尾空白字符
-                        line = line.strip()
-
-                        # 跳过空行和注释行（以#开头）
-                        if not line or line.startswith('#'):
-                            continue
-
-                        # 分割键值对（只分割第一个=，避免值中包含=的情况）
-                        if '=' not in line:
-                            print(f"警告：第{line_num}行格式错误，无等号分隔，已跳过 -> {line}")
-                            continue
-
-                        key, value = line.split('=', 1)
-                        # 去除键和值的首尾空白
-                        key = key.strip()
-                        value = value.strip()
-
-                        # 空值直接存储为空字符串
-                        if not value:
-                            config_dict[key] = ""
-                            continue
-
-                        # 自动转换数据类型
-                        # 布尔值转换
-                        if value.lower() == 'true':
-                            config_dict[key] = True
-                        elif value.lower() == 'false':
-                            config_dict[key] = False
-                        # 数字转换（整数/浮点数）
-                        else:
-                            try:
-                                # 先尝试转整数
-                                config_dict[key] = int(value)
-                            except ValueError:
-                                try:
-                                    # 再尝试转浮点数
-                                    config_dict[key] = float(value)
-                                except ValueError:
-                                    # 都不行则保留字符串
-                                    config_dict[key] = value
-
-            except FileNotFoundError:
-                print(f"错误：配置文件 {file_path} 未找到")
-            except PermissionError:
-                print(f"错误：没有权限读取 {file_path} 文件")
-            except Exception as e:
-                print(f"读取配置文件时发生未知错误：{str(e)}")
-
-            return config_dict
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
         def spawn_class(grade: int = 1, max_class: int = 6) -> list:
             results = []
             for i in range(max_class):
@@ -318,7 +275,10 @@ class Leaf:
         self.data = []
         self.__data_sum: int = len(self.data)
         self.__location: str = f"{user_name}"
-        self.classes: list = spawn_class(grade=read_config()[self.user_name],max_class=read_config()[str(read_config()[self.user_name])])
+        _grade = read_config()["grade"]
+        _max_class = read_config()["m_number"]
+
+        self.classes = spawn_class(grade = _grade, max_class = _max_class)
     @property
     def data_sum(self) :
         self.__data_sum = len(self.data)
