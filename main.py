@@ -108,7 +108,7 @@ class AdminControl(PFrame):
                 s_user.delete_admin(s)
                 self.list.setItems(s_user.get_user_names("Admin"))
                 print("ok")
-        self.setDefaultCloseOperation("hide")
+        self.setDefaultCloseOperation("close")
 
         self.l = JLabel("校园两操卫生管理助手/管理打分员账户")
         self.list = JList()
@@ -137,38 +137,56 @@ class GraderControl(PFrame):
 
         def do_sth_when_click_at_add_button():
             self.list.listbox.selection_clear(0, tk.END)
-            s_user.add_admin(self.root)
+            s_user.add_grader(self.root)
             self.list.setItems(s_user.get_user_names("Grader"))
         def do_sth_when_click_at_del_button_and_select():
             s = self.list.getSelectedValue()
             print(s)
             self.list.listbox.selection_clear(0, tk.END)
             if s:
-                s_user.delete_admin(s)
+                s_user.delete_grader(s)
                 self.list.setItems(s_user.get_user_names("Grader"))
                 print("ok")
-        self.setDefaultCloseOperation("hide")
+        def set_grader_control_grade_and_m_number():
+            s = self.list.getSelectedValue()
+            if s:
+                s_user.set_m_classes(self.root, s)
+        def view_grader_control_grade_and_m_number():
+            s = self.list.getSelectedValue()
+            if s:
+                s_user.get_m_classes(s, self.root)
+
+        self.setDefaultCloseOperation("close")
 
         self.l = JLabel("校园两操卫生管理助手/管理打分员账户")
         self.list = JList()
-        self.add_button = JButton("添加 管理员")
-        self.del_button = JButton("删除 管理员")
+        self.add_button = JButton("添加 打分员")
+        self.del_button = JButton("删除 打分员")
+        self.set_grade_and_m_number = JButton("设置选中的打分员所管理的班级")
+        self.view_grader_control_classes = JButton("展示选中的打分员所打分的班级")
+
 
         self.add_button.setBounds(0, 70, 200, 30)
         self.del_button.setBounds(0, 120, 200, 30)
         self.l.setBounds(200, 0, 200, 30)
         self.list.setBounds(400, 70 , 200, 400)
+        self.set_grade_and_m_number.setBounds(0, 170, 200, 30)
+        self.view_grader_control_classes.setBounds(0, 220, 200, 30)
+
         self.list.setItems(s_user.get_user_names("Grader"))
+
 
         self.add(self.l)
         self.add(self.list)
         self.add(self.add_button)
         self.add(self.del_button)
+        self.add(self.set_grade_and_m_number)
+        self.add(self.view_grader_control_classes)
 
         self.add_button.addActionListener(func=do_sth_when_click_at_add_button)
         self.del_button.addActionListener(func=do_sth_when_click_at_del_button_and_select)
-
-
+        self.set_grade_and_m_number.addActionListener(func=set_grader_control_grade_and_m_number)
+        self.view_grader_control_classes.addActionListener(func=view_grader_control_grade_and_m_number)
 
 if __name__ == '__main__':
     # 启动程序
@@ -180,18 +198,29 @@ if __name__ == '__main__':
     if user.login_level == "Admin":
         app = MainPage(user)
         app.setVisible(True)
+
+
         if app.click_state == "set_admin":
             a_c_page = AdminControl(user)
             a_c_page.setVisible(True)
+
+
         elif app.click_state == "set_grader":
             g_c_page = GraderControl(user)
+            g_c_page.setVisible(True)
 
         elif app.click_state == "set_teacher":
             pass
+
+
     elif user.login_level == "Grader":
         pass
+
+
     elif user.login_level == "Teacher":
         pass
+
+
     print(f"OK, {user.login_level}")
 
 

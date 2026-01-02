@@ -1,5 +1,6 @@
 from tool_kit import User
-from display_gui import PFrame, JButton
+from display_gui import PFrame, JButton, MessageDialog
+
 if __name__ == "__main__":
     red = "\033[31m"
     yellow = "\033[33m"
@@ -16,7 +17,8 @@ if __name__ == "__main__":
             super().__init__("hahaha", 600, 600)
             u = User("0", "0")
             def a():
-                u.set_m_classes(self.root)
+                p = MessageDialog(self.root, "哈哈哈哈哈哈哈哈哈哈哈哈哈")
+
             b = JButton("test")
             b.setBounds(0, 0, 150, 30)
             self.add(b)

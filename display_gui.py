@@ -42,6 +42,7 @@ class JPic(Component):
         初始化图片组件
         :param image_path: 图片文件路径（可选，后续可通过 setImage 设置）
         """
+        self._last_image_path = None
         self.label = tk.Label()
         super().__init__(self.label)
         self._image_tk = None  # 必须保留引用，防止被垃圾回收
@@ -87,7 +88,7 @@ class JPic(Component):
 
     def setSize(self, width, height):
         """重写 setSize，在调整大小时重新缩放图片（如果已有图片）"""
-        old_w, old_h = self._width, self._height
+        _, old_h = self._width, self._height
         super().setSize(width, height)
 
         # 如果已有图片，尝试重新加载并缩放到新尺寸
@@ -206,6 +207,69 @@ class JTextField(Component):
     def getText(self):
         return self.var.get()
 
+
+class MessageDialog:
+    """
+    显示一个模态子窗口，用于展示一段文本信息。
+
+    参数:
+        parent_root: 父窗口的 Tk 根对象（通常是 PFrame.root）
+        message: 要显示的字符串内容
+        title: 子窗口标题（可选，默认为 "提示"）
+        width: 窗口宽度（默认 300）
+        height: 窗口高度（默认 150）
+    """
+
+    def __init__(self, parent_root, message: str, title: str = "提示", width: int = 300, height: int = 150):
+        self.parent_root = parent_root
+        self.message = message
+        self.title = title
+        self.width = width
+        self.height = height
+
+        # 创建子窗口（Toplevel）
+        self.dialog = tk.Toplevel(self.parent_root)
+        self.dialog.title(self.title)
+        self.dialog.geometry(f"{self.width}x{self.height}")
+        self.dialog.resizable(False, False)
+
+        # 居中显示（相对于父窗口）
+        self._center_window()
+
+        # 创建文本标签
+        text_label = tk.Label(
+            self.dialog,
+            text=self.message,
+            wraplength=self.width - 40,  # 自动换行
+            justify="left",
+            anchor="nw"
+        )
+        text_label.place(x=20, y=20, width=self.width - 40, height=self.height - 80)
+
+        # 创建“确定”按钮
+        ok_button = tk.Button(self.dialog, text="确定", command=self.close)
+        ok_button.place(x=(self.width - 60) // 2, y=self.height - 50, width=60, height=30)
+
+        # 模态：禁用父窗口交互
+        self.dialog.transient(self.parent_root)
+        self.dialog.grab_set()  # 模态锁定
+        self.parent_root.wait_window(self.dialog)  # 等待窗口关闭
+
+    def _center_window(self):
+        """将子窗口居中于父窗口"""
+        self.dialog.update_idletasks()
+        parent_x = self.parent_root.winfo_x()
+        parent_y = self.parent_root.winfo_y()
+        parent_width = self.parent_root.winfo_width()
+        parent_height = self.parent_root.winfo_height()
+
+        x = parent_x + (parent_width - self.width) // 2
+        y = parent_y + (parent_height - self.height) // 2
+        self.dialog.geometry(f"+{x}+{y}")
+
+    def close(self):
+        """关闭对话框"""
+        self.dialog.destroy()
 
 class PFrame:
     """主窗口类，模仿 Java JFrame，但命名为 PFrame (Python Frame)"""

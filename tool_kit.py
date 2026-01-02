@@ -7,42 +7,27 @@ from display_gui import *
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 import pandas as pd
-import numpy as np
 
 class HasNoFinishError(Exception):
     pass
 def remove_empty_columns(path):
-    """
-    删除Excel文件中第一行和第二行都为空的列（空白列），
-    并将结果保存回原文件。
+    df = pd.read_excel(path, header=None, dtype="string")  # ← 关键：用 "string" 而非 str
 
-    参数:
-        path (str): Excel文件路径（.xlsx）
-    """
-    # 读取Excel，保留原始索引，不把第一行当作列名
-    df = pd.read_excel(path, header=None, dtype=str)
-
-    # 确保至少有两行，否则无法判断
     if df.shape[0] < 2:
         print("警告：Excel文件少于两行，无法判断空白列。")
         return
 
-    # 将空字符串转为 NaN，便于统一判断
-    df = df.replace(r'^\s*$', np.nan, regex=True).infer_objects
+    # 替换纯空白为 pd.NA（与 string dtype 兼容）
+    df = df.replace(r'^\s*$', pd.NA, regex=True)
 
-    # 获取所有列索引
     cols_to_drop = []
     for col in df.columns:
-        # 检查第0行和第1行是否都为空（NaN）
         val1 = df.iloc[0, col]
         val2 = df.iloc[1, col]
         if pd.isna(val1) and pd.isna(val2):
             cols_to_drop.append(col)
 
-    # 删除空白列
     df_cleaned = df.drop(columns=cols_to_drop).reset_index(drop=True)
-
-    # 保存回原文件（覆盖）
     df_cleaned.to_excel(path, index=False, header=False)
 
     print(f"已删除 {len(cols_to_drop)} 个空白列，文件已更新：{path}")
@@ -125,17 +110,16 @@ def get_users_and_passwords() -> dict[str, dict[str, str]]:
                             name_pwd_dict[name_str] = pwd_str
 
                     row += 2  # 步长2，按行配对姓名和密码
-                return name_pwd_dict
         except Exception as e:
             warnings.warn(f"解析Excel数据失败：{e}")
         finally:
             wb.close()  # 确保关闭工作簿
-
+            return name_pwd_dict
     # 封装
     user_levels: list[str] = ["Admin", "Grader", "Teacher"]
     names_and_passwords = {}
     for user_level in user_levels:
-        sheets: dict[str, str] = sheet_to_dict(f"./data/{user_level}_names_and_passwords.xlsx")
+        sheets: dict[str, str] = sheet_to_dict(f"data/{user_level}_names_and_passwords.xlsx")
 
         temp_names_and_passwords = {}
         for key in sheets:
@@ -285,7 +269,7 @@ class User:
 
         return result[0] if result[0] is not None else ""
 
-    def set_m_classes(self, root) -> None:
+    def set_m_classes(self, root, grader_name: str) -> None:
         import json
         import os
 
@@ -306,8 +290,8 @@ class User:
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"配置文件 '{file_path}' 不存在。")
 
-            with open(file_path, 'r', encoding='utf-8') as _f:
-                return json.load(_f)
+            with open(file_path, 'r', encoding='utf-8') as __f:
+                return json.load(__f)
         """
             {
                 "u_name1" : 
@@ -322,7 +306,7 @@ class User:
                 }
             }
         """
-        u_name = self.login_name
+        u_name = grader_name
         info: dict[str, dict[str, str]] = read_config()
         print(info)
         grade = self.__get_input(f"请输入{u_name}所需要管理的年级", root)
@@ -334,6 +318,57 @@ class User:
             info[u_name] = {"grade": grade, "m_number": m_number}
         with open('config.json', 'w', encoding='utf-8') as _f:
             json.dump(info, _f, ensure_ascii=False, indent=4)
+    def get_m_classes(self, user_name: str, root):
+        import json
+        import os
+
+        def read_config(file_path='config.json'):
+            """
+            读取 config.json 配置文件并返回其内容。
+
+            参数:
+                file_path (str): 配置文件路径，默认为 'config.json'
+
+            返回:
+                dict: JSON 文件解析后的 Python 字典
+
+            异常:
+                FileNotFoundError: 如果文件不存在
+                json.JSONDecodeError: 如果文件内容不是合法的 JSON
+            """
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"配置文件 '{file_path}' 不存在。")
+
+            with open(file_path, 'r', encoding='utf-8') as __f:
+                return json.load(__f)
+
+        """
+            {
+                "u_name1" : 
+                {
+                    grade : 6
+                    m_number : 6
+                }
+                "u_name2"
+                {
+                    grade : 6
+                    m_number : 6
+                }
+            }
+        """
+        u_name = user_name
+        info: dict[str, dict[str, str]] = read_config()
+        try:
+            def spawn_class(grade: int = 1, max_class: int = 6) -> list:
+                results = []
+                for i in range(max_class):
+                    results.append(f"{grade}0{i + 1}")
+                return results
+            s: str = str(spawn_class(int(info[u_name]["grade"]), int(info[u_name]["m_number"])))
+            res = s.replace("[", "").replace("]", "").replace("'", "")
+            MessageDialog(root, res)
+        except IndexError as e:
+            warnings.warn(str(e))
 
 
 
@@ -381,18 +416,18 @@ class User:
             sheet[f"{get_column_letter(admin_num + 1)}2"] = encryptor.encrypt(password)
             wb.save("data/Admin_names_and_passwords.xlsx")
 
-    def add_grader(self, name, password):
+    def add_grader(self, root):
         """
         用于管理员或老师注册一个打分员账户
-        :param name: 注册的姓名
-        :param password: 注册密码
         :return: 无
         """
         if self.login_level == "Admin" or self.login_level == "Teacher":  # 验证用户等级
             wb = load_workbook("data/Grader_names_and_passwords.xlsx")
             sheet = wb.active
             encryptor = FixedIVEncryptor()
-            admin_num = len(get_users_and_passwords()["Grader"])
+            admin_num = len(self.get_user_names("Grader"))
+            name = self.__get_input("请输入要添加的打分员姓名", root)
+            password = self.__get_input(f"请输入{name}的密码", root)
             sheet[f"{get_column_letter(admin_num + 1)}1"] = encryptor.encrypt(name)
             sheet[f"{get_column_letter(admin_num + 1)}2"] = encryptor.encrypt(password)
             wb.save("data/Grader_names_and_passwords.xlsx")
@@ -470,7 +505,7 @@ class User:
             traceback.print_exc()
 
     def delete_grader(self, name: str):
-        if self.login_level != "Grader":
+        if self.login_level != "Admin":
             print("❌ 权限不足")
             return
 
@@ -480,10 +515,10 @@ class User:
             encryptor = FixedIVEncryptor()
             plaintext_to_encrypted = {}
 
-            for enc_user, enc_pwd in encrypted_dict.items():
+            for enc_user in encrypted_dict:
                 try:
+                    print(f"[DEBUG] 尝试解密: {repr(enc_user)}")
                     plain_user = encryptor.decrypt(enc_user)
-                    # plain_pwd = encryptor.decrypt(enc_pwd)  # 暂时不需要密码
                     plaintext_to_encrypted[plain_user] = enc_user  # 只需密文用户名用于定位
                 except IndexError as e:
                     print(e)
