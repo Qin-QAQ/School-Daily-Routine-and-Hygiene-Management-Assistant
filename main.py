@@ -7,6 +7,7 @@ from tool_kit import User
 from tool_kit import PFrame
 from tool_kit import tk
 
+
 class LoginPage(PFrame):
     def __init__(self):
         super().__init__(title="School Daily Routine and Hygiene Management Assistant", width=500, height=400)

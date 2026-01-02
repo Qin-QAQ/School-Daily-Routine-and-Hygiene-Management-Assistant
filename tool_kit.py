@@ -6,8 +6,45 @@ from SQLite_funcs import *
 from display_gui import *
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
+import pandas as pd
+import numpy as np
 
 
+def remove_empty_columns(path):
+    """
+    删除Excel文件中第一行和第二行都为空的列（空白列），
+    并将结果保存回原文件。
+
+    参数:
+        path (str): Excel文件路径（.xlsx）
+    """
+    # 读取Excel，保留原始索引，不把第一行当作列名
+    df = pd.read_excel(path, header=None, dtype=str)
+
+    # 确保至少有两行，否则无法判断
+    if df.shape[0] < 2:
+        print("警告：Excel文件少于两行，无法判断空白列。")
+        return
+
+    # 将空字符串转为 NaN，便于统一判断
+    df = df.replace(r'^\s*$', np.nan, regex=True).infer_objects(copy=False)
+
+    # 获取所有列索引
+    cols_to_drop = []
+    for col in df.columns:
+        # 检查第0行和第1行是否都为空（NaN）
+        val1 = df.iloc[0, col]
+        val2 = df.iloc[1, col]
+        if pd.isna(val1) and pd.isna(val2):
+            cols_to_drop.append(col)
+
+    # 删除空白列
+    df_cleaned = df.drop(columns=cols_to_drop).reset_index(drop=True)
+
+    # 保存回原文件（覆盖）
+    df_cleaned.to_excel(path, index=False, header=False)
+
+    print(f"已删除 {len(cols_to_drop)} 个空白列，文件已更新：{path}")
 def decrypt_all(d: dict[str, str]) -> dict[str, str]:
     """
     这个函数用于解密字典中所有的加密文本
@@ -33,14 +70,14 @@ def get_users_and_passwords() -> dict[str, dict[str, str]]:
     :return: 封装好的全对应表 (该字典是加密后的) {user_level: {name: password, ...}, ...}
     """
 
-    def sheet_to_dict(path: str) -> dict[str, str]:
+    def sheet_to_dict(path: str) -> dict[str, str] | None:
         """
         自动解析Excel文件提取姓名-密码映射字典
         :param path: Excel文件路径
         :return: {姓名: 密码}的字典，无有效数据时返回空字典
         """
         # 初始化返回字典
-        name_pwd_dict = {}
+        name_pwd_dict: dict[str, str] = {}
 
         # 加载Excel文件
         try:
@@ -87,13 +124,11 @@ def get_users_and_passwords() -> dict[str, dict[str, str]]:
                             name_pwd_dict[name_str] = pwd_str
 
                     row += 2  # 步长2，按行配对姓名和密码
-
+                return name_pwd_dict
         except Exception as e:
-            warnings.warn(f"解析Excel数据失败：{str(e)}")
+            warnings.warn(f"解析Excel数据失败：{e}")
         finally:
             wb.close()  # 确保关闭工作簿
-
-        return name_pwd_dict
 
     # 封装
     user_levels: list[str] = ["Admin", "Grader", "Teacher"]
@@ -106,6 +141,10 @@ def get_users_and_passwords() -> dict[str, dict[str, str]]:
             index_name = key
             temp_names_and_passwords[index_name] = sheets[index_name]
         names_and_passwords[user_level] = temp_names_and_passwords
+    remove_empty_columns("data/Admin_names_and_passwords.xlsx")
+    remove_empty_columns("data/Grader_names_and_passwords.xlsx")
+    remove_empty_columns("data/Teacher_names_and_passwords.xlsx")
+
     return names_and_passwords
 
 
@@ -548,9 +587,16 @@ class User:
             con = {"class": c, "day": d}
             sql.update_data(f"{get_time()['d']}", new_data=data, conditions=con)
 
-    def sql_print_table(self):
+    def sql_get_table(self) -> list[str]:
+        result = []
         if self.login_level != "has no login" and self.login_level != "Teacher":
-            sql = MyEasySQLite()
+            sql = MyEasySQLite(f"Leaf/{self.login_name}/{get_time()['y']}-{get_time()['m']}.db")
+            t = sql.get_data(f"{get_time()['d']}")
+            tmp: dict[str, str] = t[0]
+            for k, v in tmp.items():
+                if k == "score":
+                    result.append(v)
+        return result
 
     ####################test#############
     @staticmethod
