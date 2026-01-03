@@ -310,15 +310,18 @@ class User:
         info: dict[str, dict[str, str]] = read_config()
         print(info)
         grade = self.__get_input(f"请输入{u_name}所需要管理的年级", root)
+        m_type = self.__get_input(f"请输入{u_name}管理的类别", root)
         m_number = self.__get_input(f"请输入{grade}有多少个班级", root)
         if u_name in info:
             info[u_name]["grade"] = grade
+            info[u_name]["type"] = m_type
             info[u_name]["m_number"] = m_number
         else:
-            info[u_name] = {"grade": grade, "m_number": m_number}
+            info[u_name] = {"grade": grade, "type": m_type, "m_number": m_number}
         with open('config.json', 'w', encoding='utf-8') as _f:
             json.dump(info, _f, ensure_ascii=False, indent=4)
-    def get_m_classes(self, user_name: str, root):
+    @staticmethod
+    def get_m_classes(user_name: str, root):
         import json
         import os
 
@@ -510,6 +513,28 @@ class User:
             return
 
         try:
+            import json
+            import os
+
+            def read_config(file_path='config.json'):
+                """
+                读取 config.json 配置文件并返回其内容。
+
+                参数:
+                    file_path (str): 配置文件路径，默认为 'config.json'
+
+                返回:
+                    dict: JSON 文件解析后的 Python 字典
+
+                异常:
+                    FileNotFoundError: 如果文件不存在
+                    json.JSONDecodeError: 如果文件内容不是合法的 JSON
+                """
+                if not os.path.exists(file_path):
+                    raise FileNotFoundError(f"配置文件 '{file_path}' 不存在。")
+
+                with open(file_path, 'r', encoding='utf-8') as __f:
+                    return json.load(__f)
             # 1. 获取原始的加密字典（密文用户名 -> 密文密码）
             encrypted_dict = get_users_and_passwords()["Grader"]
             encryptor = FixedIVEncryptor()
@@ -547,10 +572,15 @@ class User:
                 return
 
             # 6. 清空该列
+            info = read_config()
+
+            del info[name]
             ws.cell(row=1, column=found_col).value = None
             ws.cell(row=2, column=found_col).value = None
 
             wb.save("data/Grader_names_and_passwords.xlsx")
+            with open('config.json', 'w', encoding='utf-8') as _f:
+                json.dump(info, _f, ensure_ascii=False, indent=4)
             print(f"✅ 成功删除打分员: {name}")
 
         except Exception as e:
