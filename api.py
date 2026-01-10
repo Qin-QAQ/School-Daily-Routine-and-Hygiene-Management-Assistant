@@ -1,20 +1,65 @@
-import flask
+import json
 from flask import Flask, jsonify, request
-from flask.sansio.app import App
 from flask_cors import CORS
+
 from tool_kit import User
 
-class App(Flask):
-    def __init__(self):
-        super(App, self).__init__(__name__)
-        CORS(self)
 
-        self.add_url_rule('/api/login', view_func=self.login, methods=['GET', 'POST'])
+app = Flask(__name__)
+CORS(app)
+def response(text):
+    return jsonify({"code": 200, "message": text})
 
-    def login(self):
+def json_to_dict(json_string):
+    return json.loads(json_string)
+def check_level(name, pwd, level):
+    u = User(login_name=name, password=pwd)
+    if u.login_level != level:
+        return False
+    return True
 
-        return jsonify({'code': 200})
+
+@app.route('/api/get-login-level')
+def login():
+    password = request.args.get('password')
+    name = request.args.get('name')
+    print("OK")
+    print(password)
+    print(name)
+    u = User(login_name=name, password=password)
+    return response(u.login_level)
+@app.route('/api/')
+@app.route('/api/test')
+def test():
+    return jsonify({"code": 200, "message": "ok"})
 
 if __name__ == '__main__':
-    app = App()
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
