@@ -3,7 +3,6 @@ import warnings
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from SQLite_funcs import *
-from display_gui import *
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 import pandas as pd
@@ -206,70 +205,15 @@ class User:
         self.m_class = ""
         self.m_number = ""
 
-    def __get_input(self, text: str, parent_window) -> str:
-        dialog = tk.Toplevel(parent_window)
-        dialog.title(text)
-        dialog.geometry("300x120")
-        dialog.resizable(False, False)
-        dialog.transient(parent_window)
-        dialog.grab_set()
-
-        # 居中
-        dialog.update_idletasks()
-        x = parent_window.winfo_rootx() + (parent_window.winfo_width() // 2) - 150
-        y = parent_window.winfo_rooty() + (parent_window.winfo_height() // 2) - 60
-        dialog.geometry(f"+{x}+{y}")
-
-        # 手动创建 widget 并包装
-        label_widget = tk.Label(dialog, text=text, anchor='w')
-        field_widget = tk.Entry(dialog)
-        button_widget = tk.Button(dialog, text="确定")
-
-        from display_gui import Component
-
-        class _WrappedLabel(Component):
-            def __init__(self, w):
-                super().__init__(w)
-
-        class _WrappedField(Component):
-            def __init__(self, w):
-                super().__init__(w)
-
-            def getText(self):
-                return self.widget.get()
-
-        class _WrappedButton(Component):
-            def __init__(self, w):
-                super().__init__(w)
-
-            def addActionListener(self, f):
-                self.widget.config(command=f)
-
-        label = _WrappedLabel(label_widget)
-        field = _WrappedField(field_widget)
-        button = _WrappedButton(button_widget)
-
-        label.setBounds(20, 20, 260, 20)
-        field.setBounds(20, 50, 260, 25)
-        button.setBounds(110, 85, 80, 25)
-
-        result = [None]
-
-        def on_submit():
-            result[0] = field.getText()
-            dialog.destroy()
-
-        button.addActionListener(on_submit)
-        field_widget.bind("<Return>", lambda e: on_submit())
-
-        # ✅ 关键修复：不要设置 protocol！让默认行为处理 × 按钮
-        # dialog.protocol("WM_DELETE_WINDOW", ...)  ← 删除这行！
-
-        parent_window.wait_window(dialog)  # 阻塞直到 dialog 被 destroy
-
-        return result[0] if result[0] is not None else ""
-
-    def set_m_classes(self, root, grader_name: str) -> None:
+    @staticmethod
+    def set_m_classes(grader_name: str, grade, m_type, m_number) -> None:
+        """
+        设置管理员所管理的班级
+        :param grader_name: 打分员的名字
+        :param grade: 管理的年级
+        :param m_type: 管理类别
+        :param m_number: 在这个年级中有多少个班级
+        """
         import json
         import os
 
@@ -309,9 +253,6 @@ class User:
         u_name = grader_name
         info: dict[str, dict[str, str]] = read_config()
         print(info)
-        grade = self.__get_input(f"请输入{u_name}所需要管理的年级", root)
-        m_type = self.__get_input(f"请输入{u_name}管理的类别", root)
-        m_number = self.__get_input(f"请输入{grade}有多少个班级", root)
         if u_name in info:
             info[u_name]["grade"] = grade
             info[u_name]["type"] = m_type
@@ -321,44 +262,17 @@ class User:
         with open('config.json', 'w', encoding='utf-8') as _f:
             json.dump(info, _f, ensure_ascii=False, indent=4)
     @staticmethod
-    def get_m_classes(user_name: str, root):
+    def get_m_classes(user_name: str):
         import json
         import os
 
         def read_config(file_path='config.json'):
-            """
-            读取 config.json 配置文件并返回其内容。
-
-            参数:
-                file_path (str): 配置文件路径，默认为 'config.json'
-
-            返回:
-                dict: JSON 文件解析后的 Python 字典
-
-            异常:
-                FileNotFoundError: 如果文件不存在
-                json.JSONDecodeError: 如果文件内容不是合法的 JSON
-            """
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"配置文件 '{file_path}' 不存在。")
 
             with open(file_path, 'r', encoding='utf-8') as __f:
                 return json.load(__f)
 
-        """
-            {
-                "u_name1" : 
-                {
-                    grade : 6
-                    m_number : 6
-                }
-                "u_name2"
-                {
-                    grade : 6
-                    m_number : 6
-                }
-            }
-        """
         u_name = user_name
         info: dict[str, dict[str, str]] = read_config()
         try:
@@ -369,7 +283,7 @@ class User:
                 return results
             s: str = str(spawn_class(int(info[u_name]["grade"]), int(info[u_name]["m_number"])))
             res = s.replace("[", "").replace("]", "").replace("'", "")
-            MessageDialog(root, res)
+            return res
         except IndexError as e:
             warnings.warn(str(e))
 
@@ -403,13 +317,12 @@ class User:
     def login_level(self, level: str):
         self.__level = level
 
-    def add_admin(self, root):
+    def add_admin(self, name, password):
         """
-        用于管理员注册一个管理员账户
-        :return: 无
+        添加一个打分员账户
+        :param name: 添加的账户名
+        :param password: 要添加的密码
         """
-        name = self.__get_input("请输入要添加的管理员的姓名", root)
-        password = self.__get_input("请输入该账号的密码", root)
         if self.login_level == "Admin":  # 验证用户等级
             wb = load_workbook("data/Admin_names_and_passwords.xlsx")
             sheet = wb.active
@@ -419,18 +332,17 @@ class User:
             sheet[f"{get_column_letter(admin_num + 1)}2"] = encryptor.encrypt(password)
             wb.save("data/Admin_names_and_passwords.xlsx")
 
-    def add_grader(self, root):
+    def add_grader(self, name, password):
         """
         用于管理员或老师注册一个打分员账户
-        :return: 无
+        :param name: 添加的打分员的名字
+        :param password: 要添加的密码
         """
         if self.login_level == "Admin" or self.login_level == "Teacher":  # 验证用户等级
             wb = load_workbook("data/Grader_names_and_passwords.xlsx")
             sheet = wb.active
             encryptor = FixedIVEncryptor()
             admin_num = len(self.get_user_names("Grader"))
-            name = self.__get_input("请输入要添加的打分员姓名", root)
-            password = self.__get_input(f"请输入{name}的密码", root)
             sheet[f"{get_column_letter(admin_num + 1)}1"] = encryptor.encrypt(name)
             sheet[f"{get_column_letter(admin_num + 1)}2"] = encryptor.encrypt(password)
             wb.save("data/Grader_names_and_passwords.xlsx")
@@ -674,36 +586,40 @@ class User:
                                                conditions={'name': user_name}))
         return self.__punch_state
 
-    def sql_add_data(self, root):
+    def sql_add_data(self, l : list):
         if self.login_level != "has no login" and self.login_level != "Teacher":
             leaf: Leaf = Leaf(self.login_name)
-            for i in leaf.classes:
+            for i in range(0, len(leaf.classes)-1):
                 for j in range(5):
-                    u: str = self.__get_input(f"请输入你要给{i}班添加第{j}天的分数值", root)
+                    u: str = l[j]
                     leaf.add_data(u)
             print("保存中......")
             self.__punch_state = True
             leaf.save()
             print("保存完毕")
 
-    def sql_del_data(self, root):
+    def sql_del_data(self, c, d):
         """
         用于操作sql的删除操作
+        :param c: 删除的班级
+        :param d: 要删除第几天的分数
         """
 
         if self.login_level != "has no login" and self.login_level != "Teacher":
-            c = self.__get_input("你要删除哪个班的分数", root)
-            d = self.__get_input("你要删除这个班第几天的分数", root)
             sql = MyEasySQLite(f"Leaf/{self.login_name}/{get_time()['y']}-{get_time()['m']}.db")
             con = {"class": c, "day": d}
             sql.delete_data(f"{get_time()['d']}", con)
 
-    def sql_update_data(self, root):
+    def sql_update_data(self, c, d, score):
+        """
+        更新数据库哪个班级的那一天分数，也就是替换
+        :param score: 替换的分数
+        :param c: 要替换的班级
+        :param d: 这个班级那一天的分数
+        """
         if self.login_level != "has no login" and self.login_level != "Teacher":
             sql = MyEasySQLite(f"Leaf/{self.login_name}/{get_time()['y']}-{get_time()['m']}.db")
-            c = self.__get_input("请输入你要替换的班级", root)
-            d = self.__get_input("请输入你要替换哪一天的分数", root)
-            data = {"score": self.__get_input("请输入你要替换的分数", root)}
+            data = {"score": score}
             con = {"class": c, "day": d}
             sql.update_data(f"{get_time()['d']}", new_data=data, conditions=con)
 
